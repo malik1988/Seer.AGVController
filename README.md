@@ -7,4 +7,4 @@
 
 
 ## ScreenShot
-![1](./ScreenShots/shot1.png)
+![1](./ScreenShots/shot1.PNG)
