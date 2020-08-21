@@ -16,13 +16,16 @@ namespace Seer.AGVController
         AGVCommucation comStatus = new AGVCommucation();
         AGVCommucation comTask = new AGVCommucation();
 
-        object locker = new object();
-        Queue<AGVComFrame> msgList = new Queue<AGVComFrame>();
+        object lockerStatus = new object();
+        Queue<AGVComFrame> msgStatusList = new Queue<AGVComFrame>();
+        object lockerTask = new object();
+        Queue<AGVComFrame> msgTaskList = new Queue<AGVComFrame>();
 
         Timer timerStatus;
         Timer timerTask;
 
         public EventHandler<string> OnStatusUpdate;
+        public EventHandler<string> OnTaskUpdate;
         bool _isConnected = false;
         public bool IsConnected { get { return this._isConnected; } }
 
@@ -55,7 +58,7 @@ namespace Seer.AGVController
                 string resultTask = comTask.Connect(ip, (int)AGVPort.导航);
                 if (resultTask == "Success")
                 {
-                    //timerTask.Start();
+                    timerTask.Start();
                     this._isConnected = true;
                 }
                 result += ":" + resultTask;
@@ -76,11 +79,19 @@ namespace Seer.AGVController
             return frame;
         }
 
-        public void AddMessage(AGVComFrame msg)
+        public void AddStatusMessage(AGVComFrame msg)
         {
-            lock (locker)
+            lock (lockerStatus)
             {
-                msgList.Enqueue(msg);
+                msgStatusList.Enqueue(msg);
+            }
+        }
+
+        public void AddTaskMessage(AGVComFrame msg)
+        {
+            lock (lockerTask)
+            {
+                msgTaskList.Enqueue(msg);
             }
         }
 
@@ -91,14 +102,14 @@ namespace Seer.AGVController
         /// <param name="e"></param>
         void timerStatus_Elapsed(object sender, ElapsedEventArgs e)
         {
-            lock (locker)
+            lock (lockerStatus)
             {
-                if (msgList.Count > 0)
+                if (msgStatusList.Count > 0)
                 {
-                    AGVComFrame response = comStatus.SendAndGet(msgList.Dequeue(), 300);
+                    AGVComFrame response = comStatus.SendAndGet(msgStatusList.Dequeue(), 300);
                     if (null != response && null != response.data && null != this.OnStatusUpdate)
                     {
-                        string data = System.Text.ASCIIEncoding.UTF8.GetString(response.data);
+                        string data = response.Message;
                         AGVTypes _type = (AGVTypes)(response.header.type - AGVProtocolHeader.TypeResponseOffset);
                         string respData = _type.ToString() + ":" + data;
                         this.OnStatusUpdate.BeginInvoke(this, respData, null, null);
@@ -117,6 +128,20 @@ namespace Seer.AGVController
 
         private void timerTask_Elapsed(object sender, ElapsedEventArgs e)
         {
+            lock (lockerTask)
+            {
+                if (msgTaskList.Count > 0)
+                {
+                    AGVComFrame response = comTask.SendAndGet(msgTaskList.Dequeue(), 300);
+                    if (null != response && null != response.data && null != this.OnTaskUpdate)
+                    {
+                        string data = response.Message;
+                        AGVTypes _type = (AGVTypes)(response.header.type - AGVProtocolHeader.TypeResponseOffset);
+                        string respData = _type.ToString() + ":" + data;
+                        this.OnTaskUpdate.BeginInvoke(this, respData, null, null);
+                    }
+                }
+            }
         }
 
         public void Disconnect()

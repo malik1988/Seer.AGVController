@@ -20,6 +20,7 @@ namespace Seer.AGVController
             InitializeComponent();
             agv1 = new AGVController("192.168.10.107");
             agv1.OnStatusUpdate += OnAgvStatusUpdate;
+            agv1.OnTaskUpdate += OnAgvTaskUpdate;
             //string result= agv1.Connect();
 
             foreach(AGVTypes t in Enum.GetValues(typeof(AGVTypes)))
@@ -48,7 +49,7 @@ namespace Seer.AGVController
             switch (name)
             {
                 case "连接":
-                    string result = agv1.Connect(ip,false);
+                    string result = agv1.Connect(ip);
                     if (result.Contains("Failed"))
                         this.label1.ForeColor = Color.Red;
                     else
@@ -70,19 +71,27 @@ namespace Seer.AGVController
         {
             this.Invoke(new Action(() =>
             {
-                this.richTextBox2.Text = e;
+                //this.richTextBox2.Text = e;
                 this.richTextBox1.AppendText(DateTime.Now.ToString() + e + "\n");
             }));
         }
-
+        void OnAgvTaskUpdate(object sender, string e)
+        {
+            this.Invoke(new Action(() =>
+            {
+                this.richTextBox2.Text = e;
+            }));
+        }
         private void button状态_Click(object sender, EventArgs e)
         {
 
             AGVTypes value = (AGVTypes)this.comboBox1.SelectedItem;
 
-            if (agv1.IsConnected)
+            AGVComFrame frame=new AGVComFrame(new AGVProtocolHeader(){type=(UInt16)AGVTypes.导航_路径导航},"{\"id\":\"LM1\"}");
 
-                agv1.AddMessage(AGVComFrameBuilder.NoData_Request(value));
+            if (agv1.IsConnected)
+                //agv1.AddTaskMessage(frame);
+                agv1.AddStatusMessage(AGVComFrameBuilder.NoData_Request(value));
             else
                 MessageBox.Show("设备未连接，请先连接设备！", "错误");
 

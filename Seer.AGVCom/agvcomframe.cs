@@ -180,6 +180,6 @@ namespace Seer.AGVCom
             return this;
         }
 
-
+        public string Message { get { return System.Text.ASCIIEncoding.UTF8.GetString(this.data); } }
     }
 }
